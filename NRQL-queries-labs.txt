@@ -1,0 +1,261 @@
+--Clone this dashboard: NRU - Adv Dash Workshop -Clone- DONT DELETE
+--https://one.nr/0mMRNXlB5Qn 
+
+
+--Explore
+
+Show event types
+SELECT * FROM Transaction  
+SELECT count(*) FROM Transaction 
+FROM Transaction SELECT average(
+
+-----------------------------------------------------------
+
+--WHERE
+
+SELECT average(duration) FROM Transaction WHERE appName = 'FoodMe'
+SELECT average(duration) FROM Transaction FACET appName WHERE appName ='Billing Service' OR appName = 'Delivery'
+SELECT average(duration) FROM Transaction FACET appName WHERE appName IN ('Billing Service','Inventory Service','Delivery')
+SELECT average(duration) FROM Transaction FACET appName WHERE appName LIKE '%Service%'
+
+--NULL VALUES
+
+SELECT * FROM Transaction WHERE appName = 'WebPortal' WHERE couponCode is not null
+   
+--LIMIT MAX
+
+SELECT count(*) FROM  Log WHERE namespace_name NOT LIKE '%acme' FACET message SINCE 10 minutes ago LIMIT MAX 
+
+-----------------------------------------------------------
+
+Lab: 
+Query part of your data
+
+/* Add a chart to show average page performance for specific browsers (userAgentName).  
+Use the WHERE …. IN clause to include  Chrome, Safari,  and Microsoft Edge : */
+
+SELECT average(duration) FROM PageView FACET userAgentName 
+WHERE _____________ IN (‘_______’,’________’,’_______’)
+
+/* Add a chart to show average page performance for specific pages  (pageUrl).  
+Use the WHERE …. LIKE clause and wildcards to include  any urls that contain ‘phones’ : */
+
+SELECT average(duration) FROM PageView FACET pageUrl 
+WHERE _____________ LIKE ‘______________’
+
+-----------------------------------------------------------
+
+Aggregate functions
+--Count/Average/Min/Max/Percentile/Percentage count
+
+SELECT count(attribute) FROM Transaction 
+
+SELECT count(*) FROM Transaction FACET Name 
+
+SELECT average(duration) FROM Transaction FACET appName 
+
+SELECT percentile(duration, 5, 50, 95) FROM PageView TIMESERIES AUTO
+
+SELECT percentage(count(result ), WHERE result !='SUCCESS') FROM  SyntheticCheck
+
+-----------------------------------------------------------
+
+Lab: Aggregate functions
+--Try out these aggregate functions. 
+
+Percentile: 
+/* You want to understand more about outlier performance for your pages
+Show the 95th percentile of pageview durations grouped by browser (userAgentName). Use SELECT percentile(attribute [, percentile ]) */
+
+SELECT ___________(___________, 95) FROM PageView FACET ______________ 
+
+Percentage: 
+--Show the percentage of your pageviews which reach the ‘shoppingcart’ using a string match in the pageUrl  SELECT percentage(function(attribute), WHERE condition) FROM eventType
+
+SELECT ___________(Count(*), where pageUrl LIKE '%cart%') FROM PageView
+
+-----------------------------------------------------------
+
+Time ranges and TIMESERIES
+--SINCE, SINCE...UNTIL, TIMESERIES
+
+--SINCE 
+SELECT ... SINCE 1 day AGO  | SELECT ... SINCE yesterday | SELECT ... SINCE sunday
+
+--SINCE … UNTIL 
+SELECT ... SINCE 3 days ago UNTIL 5 hours ago 
+
+--Add TIMESERIES to your queries to plot over time
+SELECT ... SINCE 3 days ago SINCE 5 hours ago TIMESERIES
+
+--Add a value after the TIMESERIES to indicate the evaluation window, 
+SELECT ... SINCE 1 day AGO TIMESERIES 30 minutes
+
+--Add MAX after TIMESERIES to get the max no. of intervals in the time window (auto scales)  
+--(The maximum number of TIMESERIES buckets that will be returned is 366)
+SELECT ... SINCE 1 day AGO TIMESERIES MAX
+
+-----------------------------------------------------------
+
+Adding your own values to charts
+--SELECT function(attribute), value x AS ‘x’, value y AS ‘y’
+
+SELECT average(cpuPercent ), 6 AS 'min', 26 AS 'high' FROM SystemSample TIMESERIES 
+
+-----------------------------------------------------------
+
+Lab: Try out time spans and TIMESERIES 
+--Try out these queries 
+
+SELECT count(*) FROM Transaction WHERE httpResponseCode = ‘500’ 
+SINCE  _______________
+SINCE __________ UNTIL _____________
+
+
+SELECT average(pageRenderingDuration) FROM PageView SINCE 12 hours ago 
+TIMESERIES
+TIMESERIES 5 minutes
+TIMESERIES MAX
+
+-----------------------------------------------------------
+
+Adding your own values to charts
+--SELECT function(attribute), value x AS ‘x’, value y AS ‘y’
+
+SELECT average(cpuPercent ), 6 AS 'min', 26 AS 'high' FROM SystemSample TIMESERIES 
+
+-----------------------------------------------------------
+
+Lab: Try out time spans and TIMESERIES 
+--Try out these queries 
+
+SELECT count(*) FROM Transaction WHERE httpResponseCode = ‘500’ 
+SINCE  _______________
+SINCE __________ UNTIL _____________
+
+
+SELECT average(pageRenderingDuration) FROM PageView SINCE 12 hours ago 
+TIMESERIES
+TIMESERIES 5 minutes
+TIMESERIES MAX
+
+-----------------------------------------------------------
+
+Lab: Rate, TIMESERIES and SLIDE BY
+--Try out these queries and explore the results. 
+
+--Run these queries and note the x axis values stay constant.  Save one to your dashboard  
+select rate(count(*), 1 minute ) FROM Transaction  since 12 hours ago timeseries 
+select rate(count(*), 1 minute ) FROM Transaction  since 1 day ago timeseries  
+
+
+--SLIDE BY example - try one query then the second query. Try out larger TIMESERIES windows and larger SLIDE BY amounts  
+SELECT average(duration) FROM Transaction timeseries 1 minute
+SELECT average(duration) FROM Transaction timeseries 6 minute SLIDE BY 3 minute 
+
+-----------------------------------------------------------
+
+Lab: Multi FACET and FACET CASES
+
+--Add a Bar or Pie chart using a Multi-Facet query eg.   :
+--What are my 5 worst page load durations grouped by Browser (userAgentName), CountryCode, PageUrl
+
+SELECT max(duration) FROM PageView WHERE appName ='WebPortal' FACET userAgentName, countryCode, pageUrl  LIMIT 5
+
+
+--Use FACET CASES to show me how many PageViews durations are less than than 6 seconds, and longer than 6 seconds:
+SELECT count(*) FROM PageView  FACET CASES (WHERE ________ < 6, WHERE duration ______)
+
+-----------------------------------------------------------
+
+Lab: Try one of these
+--Pick one of the below and try it out 
+
+--Show the average duration of my pageloads grouped by pageUrl. Some of them are over 5 seconds!
+SELECT average(duration) AS 'avdur' FROM PageView  LIMIT MAX FACET pageUrl  
+--Narrow down the list of my pageloads which have an average duration ‘avdur’ > 5 seconds. Make sure to match the label (avdur) as your attribute to filter on
+SELECT * FROM (SELECT average(duration) AS 'avdur' FROM PageView  LIMIT MAX FACET pageUrl) WHERE avdur > 5 
+
+--RLIKE example: Show the transactions which used a coupon code and for a subset of products which have 8 values, but start with the value 6 and have any combination of 7 numbers after the 6.
+SELECT * FROM Transaction WHERE appName = 'WebPortal'  AND couponCode  is not null AND request.uri RLIKE '.*6.{7}' 
+
+-----------------------------------------------------------
+
+Multi function
+--SELECT more than one function on an event type
+
+SELECT average(duration ) AS 'pageload', average(pageRenderingDuration ) AS 'page render', average(backendDuration ) AS 'web app + network' FROM PageView where appName ='WebPortal' 
+
+-----------------------------------------------------------
+
+Compare
+--use SINCE ... COMPARE WITH
+
+
+SELECT uniqueCount(session) FROM PageView where appName='WebPortal' since 1 week ago compare with 4 week ago timeseries 1 hour
+
+--------------------------------------------------------------
+
+Multi-query per chart
+
+--Account: Demotron V2
+SELECT average(duration ) as 'webportal' FROM Transaction TIMESERIES WHERE appName ='WebPortal'
+--Account: Demotron V2
+SELECT average(duration ) as 'plan service' FROM Transaction TIMESERIES WHERE appName ='Plan Service'
+
+----------------------------------------------------------
+
+Funnel, Histogram, Heatmap
+
+--Funnel
+SELECT funnel(session, WHERE pageUrl like '%/' AS 'Homepage', where pageUrl like '%/browse/plans' AS 'Place bet', WHERE pageUrl LIKE '%login.jsp' AS 'Login',  WHERE pageUrl LIKE '%/checkout' AS 'Confirm') FROM PageView SINCE 1 day ago
+
+Histogram
+--Create a chart with a Histogram of back-end response times (Transaction) 
+--ranging up to 2 seconds with 10 buckets
+SELECT histogram(_________________, _______, _______) FROM _______________ 
+SINCE 1 day ago
+
+heatmap
+--Turn this into a heatmap of response times by adding FACET appName
+SELECT histogram(_________________, _______, _______) 
+FROM _______________ SINCE 1 day ago FACET appName
+
+--------------------------------------------------------------
+
+
+Customise widgets
+
+SELECT * FROM  NginxSample
+
+SELECT average(cpuPercent ) FROM  SystemSample TIMESERIES 
+
+--------------------------------------------------------------
+
+Lab: Challenge yourself!
+--Add some of these useful charts. use DemotronV2 account and WebPortal application:
+
+1
+--Count only http 500 errors from your Transaction event type and group by transaction name and transactionSubType
+
+2
+--SELECT the following function(attribute) and label from the PageView event to find out how many visitors are on my site right now?
+--(use SINCE 5 minutes ago) 
+uniqueCount(session) AS 'Site Visitors'
+
+3
+--You have added a custom attribute to your Transaction event type in the WebPortal app to store shopping cart total value called PurchasedCartGrandTotal
+--SELECT  the total shopping cart value using the function(atribute): 
+
+sum(PurchasedCartGrandTotal)
+
+--------------------------------------------------------------
+
+Custom Visualisations
+
+SELECT count(*) FROM PageView  FACET city LIMIT MAX WHERE city !=  'San Jose' AND city IS NOT NULL
+
+
+
+
+
